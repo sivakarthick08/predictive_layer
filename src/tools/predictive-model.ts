@@ -53,6 +53,7 @@ export const predictiveModelTool = createTool({
       }
 
       console.log('Step 1: LLM analyzing data trend...');
+      const dataFrequency = historical_data[0]?.frequency || 'monthly';
       
       // Step 1: Use LLM to analyze data characteristics
       const dataAnalysis = await analyzeDataCharacteristics(historical_data);
@@ -61,9 +62,9 @@ export const predictiveModelTool = createTool({
 
       // Step 2: Use LLM to generate appropriate ML model code
       console.log('Step 2: Generating ML model code...');
-      const generatedCode = await generateMLModelCode(dataAnalysis, forecast_horizon);
+      const generatedCode = await generateMLModelCode(dataAnalysis, forecast_horizon, dataFrequency);
       
-      console.log('Model:', generatedCode.modelType);
+      console.log('Model:', generatedCode.modelType, '| Frequency:', dataFrequency);
 
       // Step 3: Execute generated code in E2B sandbox
       console.log('Step 3: Executing ML model in E2B...');
