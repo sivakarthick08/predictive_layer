@@ -9,6 +9,55 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { executePythonCode } from './e2b-client.js';
 import type { KpiDataPoint } from '../types/index.js';
+import { perspectiveTool } from './perspective-tool.js';
+
+/**
+ * Helper function to generate perspective from forecast results
+ */
+async function generatePerspective(
+  kpiName: string,
+  currentValue: number,
+  dataPoints: number,
+  predictions: Array<{ date: string; value: number; confidence?: number; lower_bound?: number; upper_bound?: number }>,
+  modelUsed: string,
+  lastDate: string
+) {
+  try {
+    const formattedPredictions = predictions.map(p => ({
+      date: p.date,
+      forecast_value: p.value,
+      confidence: p.confidence,
+    }));
+
+    const perspectiveResult = await perspectiveTool.execute({
+      context: {
+        success: true,
+        kpi_name: kpiName,
+        forecast_count: predictions.length,
+        forecast_data: formattedPredictions,
+        metadata: {
+          model_used: modelUsed,
+          historical_points: dataPoints,
+          last_historical_value: currentValue,
+          last_historical_date: lastDate,
+        },
+      },
+    } as any);
+
+    return {
+      summary: perspectiveResult.summary,
+      highlights: perspectiveResult.highlights,
+      recommended_actions: perspectiveResult.recommended_actions,
+    };
+  } catch (error) {
+    console.warn('Failed to generate perspective:', error);
+    return {
+      summary: undefined,
+      highlights: undefined,
+      recommended_actions: undefined,
+    };
+  }
+}
 
 /**
  * Prophet Model - Best for business metrics with seasonality
@@ -919,6 +968,12 @@ export const intelligentForecastTool = createTool({
       status: z.enum(['success', 'failed']),
       reason: z.string().optional(),
     })).optional(),
+    summary: z.string().optional(),
+    highlights: z.array(z.string()).optional(),
+    recommended_actions: z.array(z.object({
+      action: z.string(),
+      horizon: z.string(),
+    })).optional(),
   }),
   execute: async ({ context }) => {
     const { kpi_name, forecast_horizon = 7 } = context;
@@ -985,6 +1040,17 @@ export const intelligentForecastTool = createTool({
             
             attemptedModels.push({ model: 'Prophet', status: 'success' });
             
+            // Generate perspective
+            const lastDate = historicalData[historicalData.length - 1].executed_at;
+            const perspective = await generatePerspective(
+              kpi_name,
+              currentValue,
+              historicalData.length,
+              prophetResult.predictions,
+              prophetResult.model_type || 'Prophet',
+              lastDate
+            );
+            
             return {
               success: true,
               kpi_name,
@@ -994,6 +1060,7 @@ export const intelligentForecastTool = createTool({
               model_used: prophetResult.model_type || 'Prophet',
               model_tier: 'primary' as const,
               attempted_models: attemptedModels,
+              ...perspective,
             };
           } else {
             attemptedModels.push({ 
@@ -1036,6 +1103,17 @@ export const intelligentForecastTool = createTool({
             
             attemptedModels.push({ model: 'LSTM', status: 'success' });
             
+            // Generate perspective
+            const lastDate = historicalData[historicalData.length - 1].executed_at;
+            const perspective = await generatePerspective(
+              kpi_name,
+              currentValue,
+              historicalData.length,
+              lstmResult.predictions,
+              lstmResult.model_type || 'LSTM',
+              lastDate
+            );
+            
             return {
               success: true,
               kpi_name,
@@ -1045,6 +1123,7 @@ export const intelligentForecastTool = createTool({
               model_used: lstmResult.model_type || 'LSTM',
               model_tier: 'secondary' as const,
               attempted_models: attemptedModels,
+              ...perspective,
             };
           } else {
             attemptedModels.push({ 
@@ -1089,6 +1168,17 @@ export const intelligentForecastTool = createTool({
             
             attemptedModels.push({ model: 'Adaptive ML', status: 'success' });
             
+            // Generate perspective
+            const lastDate = historicalData[historicalData.length - 1].executed_at;
+            const perspective = await generatePerspective(
+              kpi_name,
+              currentValue,
+              historicalData.length,
+              adaptiveResult.predictions,
+              adaptiveResult.model_used || 'Adaptive ML',
+              lastDate
+            );
+            
             return {
               success: true,
               kpi_name,
@@ -1098,6 +1188,7 @@ export const intelligentForecastTool = createTool({
               model_used: adaptiveResult.model_used || 'Adaptive ML',
               model_tier: 'tertiary' as const,
               attempted_models: attemptedModels,
+              ...perspective,
             };
           } else {
             attemptedModels.push({ 

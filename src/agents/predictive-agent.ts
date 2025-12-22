@@ -11,7 +11,7 @@ if (process.env.OPENAI_API_KEY) process.env.OPENAI_API_KEY = process.env.OPENAI_
 if (process.env.E2B_API_KEY) process.env.E2B_API_KEY = process.env.E2B_API_KEY.replace(/^['"]|['"]$/g, '');
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
-import { dataIngestTool, listKpisTool, predictiveModelTool, prophetModelAutoTool, lstmModelAutoTool, rnnModelAutoTool, intelligentForecastTool } from '../tools/index.js';
+import { dataIngestTool, listKpisTool, predictiveModelTool, prophetModelAutoTool, lstmModelAutoTool, rnnModelAutoTool, intelligentForecastTool, perspectiveTool } from '../tools/index.js';
 import predictiveAnalysisWorkflow from '../workflows/predictive-analysis.js';
 import { readDataFile } from '../config/data-config.js';
 
@@ -56,19 +56,19 @@ export const predictiveKpiAgent = new Agent({
 🎯 PRIMARY FORECASTING STRATEGY - INTELLIGENT FALLBACK SYSTEM
 The intelligent-forecast tool automatically tries models in priority order:
 
-📊 TIER 1 - PROPHET (Primary Model)
+ TIER 1 - PROPHET (Primary Model)
    - Best for: Business metrics with seasonality and trends
    - Requires: ≥10 historical data points
    - If sufficient data and succeeds → Returns Prophet forecast
    - If fails or insufficient data → Automatically tries TIER 2
 
-📈 TIER 2 - LSTM (Secondary Fallback)
+ TIER 2 - LSTM (Secondary Fallback)
    - Best for: Complex patterns, volatile data, non-linear relationships
    - Requires: ≥25 historical data points
    - If sufficient data and succeeds → Returns LSTM forecast
    - If fails or insufficient data → Automatically tries TIER 3
 
-🤖 TIER 3 - ADAPTIVE ML (Tertiary Fallback)
+ TIER 3 - ADAPTIVE ML (Tertiary Fallback)
    - Best for: Guaranteed forecast with LLM-powered model selection
    - Requires: ≥5 historical data points (minimum requirement)
    - Analyzes data characteristics and generates custom optimal model
@@ -79,6 +79,7 @@ Simply ask for a forecast and the system decides:
 - "Forecast Active Product Count" → Intelligent system tries Prophet → LSTM → Adaptive ML
 - "Forecast Total Dealer Count for 7 days" → Same fallback chain
 - System shows which tier model was used and why
+- AUTOMATIC PERSPECTIVE: Every forecast includes business-oriented perspection, highlights, and recommended actions
 
 Optional: Request specific models if needed:
 - "Forecast using Prophet" → prophetModel tool
@@ -98,6 +99,7 @@ When presenting forecast results:
 - Highlight key trends (increasing/decreasing/stable)
 - Note the number of historical data points used for training
 - If fallback occurred, explain why primary model wasn't used
+- ALWAYS present the perspection, highlights, and recommended actions (automatically included in forecast results)
 
 Be concise, data-driven, and focused on business value.`,
   model: openai('gpt-4o'),
@@ -109,6 +111,7 @@ Be concise, data-driven, and focused on business value.`,
     prophetModel: prophetModelAutoTool,
     lstmModel: lstmModelAutoTool,
     rnnModel: rnnModelAutoTool,
+    perspective: perspectiveTool,
   },
   workflows: {
     predictiveAnalysisWorkflow,

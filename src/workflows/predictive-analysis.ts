@@ -1,6 +1,6 @@
 import { createWorkflow, createStep } from '@mastra/core';
 import { z } from 'zod';
-import { predictiveModelTool } from '../tools/index.js';
+import { predictiveModelTool, perspectiveTool } from '../tools/index.js';
 import { loadData, listAvailableKpis, getDefaultDataSource } from '../config/data-config.js';
 
 type KpiPoint = {
@@ -150,9 +150,13 @@ const modelStep = createStep({
     forecast_horizon: z.number(),
   }),
   outputSchema: z.object({
+    selected_kpi: z.string().optional(),
+    data_points: z.number().optional(),
+    last_value: z.number().optional(),
+    last_date: z.string().optional(),
+    forecast_horizon: z.number().optional(),
     predictions: z.any(),
     model_used: z.string(),
-    insights: z.array(z.string()).optional(),
   }),
   execute: async ({ inputData }) => {
     const { dataSource, selected_kpi, forecast_horizon } = inputData as any;
@@ -169,22 +173,80 @@ const modelStep = createStep({
         historical_data: filtered,
         forecast_horizon,
       },
-      requestContext,
-    });
+    } as any);
 
     if (!result.success) {
       throw new Error(`Model execution failed: ${result.error}`);
     }
 
     return {
+      selected_kpi,
+      data_points: filtered.length,
+      last_value: filtered[filtered.length - 1]?.kpi_value,
+      last_date: filtered[filtered.length - 1]?.executed_at,
+      forecast_horizon,
       predictions: result.predictions || [],
       model_used: result.model_used || 'GradientBoostingRegressor',
-      insights: result.insights || [],
     };
   },
 });
 
-// STEP 5: Format output
+// STEP 5: Generate perspective (narrative + recommendations)
+const perspectiveStep = createStep({
+  id: 'generate-perspective',
+  // Accept any input shape from previous step to avoid strict schema chaining issues
+  inputSchema: z.any(),
+  outputSchema: z.object({
+    selected_kpi: z.string(),
+    data_points: z.number(),
+    last_value: z.number(),
+    last_date: z.string(),
+    forecast_horizon: z.number(),
+    predictions: z.any(),
+    model_used: z.string(),
+    summary: z.string().optional(),
+    highlights: z.array(z.string()).optional(),
+    recommended_actions: z.array(z.object({
+      action: z.string(),
+      horizon: z.string(),
+    })).optional(),
+  }),
+  execute: async ({ inputData }) => {
+    const { selected_kpi, data_points, last_value, last_date, predictions, model_used } = inputData as any;
+
+    // Format predictions for perspective tool
+    const formattedPredictions = (predictions || []).map((p: any, idx: number) => ({
+      date: p.date || p.forecast_date || new Date(new Date(last_date).getTime() + (idx + 1) * 86400000).toISOString(),
+      forecast_value: p.value || p.forecast_value || p.prediction || 0,
+      confidence: p.confidence || Math.max(40, 90 - idx),
+    }));
+
+    // Generate perspective
+    const perspectiveResult = await perspectiveTool.execute({
+      context: {
+        success: true,
+        kpi_name: selected_kpi,
+        forecast_count: formattedPredictions.length,
+        forecast_data: formattedPredictions,
+        metadata: {
+          model_used,
+          historical_points: data_points,
+          last_historical_value: last_value,
+          last_historical_date: last_date,
+        },
+      },
+    } as any);
+
+    return {
+      ...inputData,
+      summary: perspectiveResult.summary,
+      highlights: perspectiveResult.highlights,
+      recommended_actions: perspectiveResult.recommended_actions,
+    };
+  },
+});
+
+// STEP 6: Format output
 const formatStep = createStep({
   id: 'format-output',
   inputSchema: z.object({
@@ -195,6 +257,12 @@ const formatStep = createStep({
     forecast_horizon: z.number(),
     predictions: z.any(),
     model_used: z.string(),
+    summary: z.string().optional(),
+    highlights: z.array(z.string()).optional(),
+    recommended_actions: z.array(z.object({
+      action: z.string(),
+      horizon: z.string(),
+    })).optional(),
   }),
   outputSchema: z.object({
     success: z.boolean(),
@@ -211,9 +279,15 @@ const formatStep = createStep({
       last_historical_value: z.number(),
       last_historical_date: z.string(),
     }),
+    summary: z.string().optional(),
+    highlights: z.array(z.string()).optional(),
+    recommended_actions: z.array(z.object({
+      action: z.string(),
+      horizon: z.string(),
+    })).optional(),
   }),
   execute: async ({ inputData }) => {
-    const { selected_kpi, data_points, last_value, last_date, predictions, model_used } = inputData as any;
+    const { selected_kpi, data_points, last_value, last_date, predictions, model_used, summary, highlights, recommended_actions } = inputData as any;
 
     const formattedPredictions = (predictions || []).map((p: any, idx: number) => ({
       date: p.date || p.forecast_date || new Date(new Date(last_date).getTime() + (idx + 1) * 86400000).toISOString(),
@@ -232,6 +306,9 @@ const formatStep = createStep({
         last_historical_value: last_value,
         last_historical_date: last_date,
       },
+      summary,
+      highlights,
+      recommended_actions,
     };
   },
 });
@@ -262,6 +339,7 @@ export const predictiveAnalysisWorkflow = createWorkflow({
   .then(selectKpiStep)
   .then(preprocessStep)
   .then(modelStep)
+  .then(perspectiveStep)
   .then(formatStep)
   .commit();
 
