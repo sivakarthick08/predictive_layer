@@ -64,7 +64,7 @@ The intelligent-forecast tool automatically tries models in priority order:
 
  TIER 2 - LSTM (Secondary Fallback)
    - Best for: Complex patterns, volatile data, non-linear relationships
-   - Requires: ≥25 historical data points
+   - Requires: ≥10 historical data points
    - If sufficient data and succeeds → Returns LSTM forecast
    - If fails or insufficient data → Automatically tries TIER 3
 

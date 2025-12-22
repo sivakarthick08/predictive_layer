@@ -12,6 +12,56 @@ import type { KpiDataPoint } from '../types/index.js';
 import { perspectiveTool } from './perspective-tool.js';
 
 /**
+ * Generate forecast dates based on frequency
+ */
+function generateDatesForFrequency(
+  lastDate: string | Date,
+  count: number,
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
+): string[] {
+  const baseDate = new Date(lastDate);
+  const dates: string[] = [];
+
+  if (frequency === 'daily') {
+    // Daily: increment by 1 day
+    for (let i = 1; i <= count; i++) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + i);
+      dates.push(d.toISOString());
+    }
+  } else if (frequency === 'weekly') {
+    // Weekly: increment to next Monday
+    for (let i = 1; i <= count; i++) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + (7 * i));
+      // Adjust to nearest Monday
+      const dayOfWeek = d.getDay();
+      d.setDate(d.getDate() - dayOfWeek + 1);
+      dates.push(d.toISOString());
+    }
+  } else if (frequency === 'monthly') {
+    // Monthly: last day of each month
+    for (let i = 1; i <= count; i++) {
+      const d = new Date(baseDate);
+      d.setMonth(d.getMonth() + i);
+      d.setDate(0); // Last day of previous month
+      dates.push(d.toISOString());
+    }
+  } else if (frequency === 'yearly') {
+    // Yearly: Dec 31 of each year
+    for (let i = 1; i <= count; i++) {
+      const d = new Date(baseDate);
+      d.setFullYear(d.getFullYear() + i);
+      d.setMonth(11);
+      d.setDate(31);
+      dates.push(d.toISOString());
+    }
+  }
+
+  return dates;
+}
+
+/**
  * Helper function to generate perspective from forecast results
  */
 async function generatePerspective(
@@ -943,15 +993,16 @@ export const rnnModelAutoTool = createTool({
  */
 export const intelligentForecastTool = createTool({
   id: 'intelligent-forecast',
-  description: 'Smart KPI forecasting with automatic fallback: tries Prophet → LSTM → Adaptive ML. Returns best available forecast.',
+  description: 'Smart KPI forecasting with automatic fallback: tries Prophet → LSTM → Adaptive ML. Respects frequency (daily/weekly/monthly/yearly) from dataset.',
   inputSchema: z.object({
     kpi_name: z.string().describe('Name of the KPI to forecast (e.g., "Active Product Count")'),
-    forecast_horizon: z.number().optional().default(7).describe('Number of days to forecast'),
+    forecast_horizon: z.number().optional().default(7).describe('Number of periods to forecast (days for daily, weeks for weekly, months for monthly, years for yearly)'),
   }),
   outputSchema: z.object({
     success: z.boolean(),
     kpi_name: z.string().optional(),
     current_value: z.number().optional(),
+    frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional(),
     data_points_used: z.number().optional(),
     predictions: z.array(z.object({
       date: z.string(),
@@ -1021,12 +1072,10 @@ export const intelligentForecastTool = createTool({
       }
 
       const currentValue = historicalData[historicalData.length - 1].kpi_value;
-
-      
+      const frequency = (historicalData[0]?.frequency || 'daily') as 'daily' | 'weekly' | 'monthly' | 'yearly';
+      const lastDate = historicalData[historicalData.length - 1].executed_at;
 
       // ========== TIER 1: Try Prophet ==========
-      
-      
       if (historicalData.length >= 10) {
         try {
           const prophetResult = await prophetModelAutoTool.execute({
@@ -1037,16 +1086,20 @@ export const intelligentForecastTool = createTool({
           } as any);
 
           if (prophetResult.success && prophetResult.predictions && prophetResult.predictions.length > 0) {
-            
             attemptedModels.push({ model: 'Prophet', status: 'success' });
             
+            // Adjust prediction dates based on frequency
+            const adjustedPredictions = prophetResult.predictions.map((p, idx) => ({
+              ...p,
+              date: generateDatesForFrequency(lastDate, idx + 1, frequency)[idx],
+            }));
+            
             // Generate perspective
-            const lastDate = historicalData[historicalData.length - 1].executed_at;
             const perspective = await generatePerspective(
               kpi_name,
               currentValue,
               historicalData.length,
-              prophetResult.predictions,
+              adjustedPredictions,
               prophetResult.model_type || 'Prophet',
               lastDate
             );
@@ -1055,8 +1108,9 @@ export const intelligentForecastTool = createTool({
               success: true,
               kpi_name,
               current_value: currentValue,
+              frequency,
               data_points_used: historicalData.length,
-              predictions: prophetResult.predictions,
+              predictions: adjustedPredictions,
               model_used: prophetResult.model_type || 'Prophet',
               model_tier: 'primary' as const,
               attempted_models: attemptedModels,
@@ -1088,8 +1142,6 @@ export const intelligentForecastTool = createTool({
       }
 
       // ========== TIER 2: Try LSTM ==========
-      
-      
       if (historicalData.length >= 25) {
         try {
           const lstmResult = await lstmModelAutoTool.execute({
@@ -1100,16 +1152,20 @@ export const intelligentForecastTool = createTool({
           } as any);
 
           if (lstmResult.success && lstmResult.predictions && lstmResult.predictions.length > 0) {
-            
             attemptedModels.push({ model: 'LSTM', status: 'success' });
             
+            // Adjust prediction dates based on frequency
+            const adjustedPredictions = lstmResult.predictions.map((p, idx) => ({
+              ...p,
+              date: generateDatesForFrequency(lastDate, idx + 1, frequency)[idx],
+            }));
+            
             // Generate perspective
-            const lastDate = historicalData[historicalData.length - 1].executed_at;
             const perspective = await generatePerspective(
               kpi_name,
               currentValue,
               historicalData.length,
-              lstmResult.predictions,
+              adjustedPredictions,
               lstmResult.model_type || 'LSTM',
               lastDate
             );
@@ -1118,8 +1174,9 @@ export const intelligentForecastTool = createTool({
               success: true,
               kpi_name,
               current_value: currentValue,
+              frequency,
               data_points_used: historicalData.length,
-              predictions: lstmResult.predictions,
+              predictions: adjustedPredictions,
               model_used: lstmResult.model_type || 'LSTM',
               model_tier: 'secondary' as const,
               attempted_models: attemptedModels,
@@ -1151,8 +1208,6 @@ export const intelligentForecastTool = createTool({
       }
 
       // ========== TIER 3: Try Adaptive ML ==========
-      
-      
       if (historicalData.length >= 5) {
         try {
           const { predictiveModelTool } = await import('./adaptive-ml-model.js');
@@ -1165,16 +1220,20 @@ export const intelligentForecastTool = createTool({
           } as any);
 
           if (adaptiveResult.success && adaptiveResult.predictions && adaptiveResult.predictions.length > 0) {
-            
             attemptedModels.push({ model: 'Adaptive ML', status: 'success' });
             
+            // Adjust prediction dates based on frequency
+            const adjustedPredictions = adaptiveResult.predictions.map((p, idx) => ({
+              ...p,
+              date: generateDatesForFrequency(lastDate, idx + 1, frequency)[idx],
+            }));
+            
             // Generate perspective
-            const lastDate = historicalData[historicalData.length - 1].executed_at;
             const perspective = await generatePerspective(
               kpi_name,
               currentValue,
               historicalData.length,
-              adaptiveResult.predictions,
+              adjustedPredictions,
               adaptiveResult.model_used || 'Adaptive ML',
               lastDate
             );
@@ -1183,8 +1242,9 @@ export const intelligentForecastTool = createTool({
               success: true,
               kpi_name,
               current_value: currentValue,
+              frequency,
               data_points_used: historicalData.length,
-              predictions: adaptiveResult.predictions,
+              predictions: adjustedPredictions,
               model_used: adaptiveResult.model_used || 'Adaptive ML',
               model_tier: 'tertiary' as const,
               attempted_models: attemptedModels,

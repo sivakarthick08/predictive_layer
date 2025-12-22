@@ -3,6 +3,20 @@
     {
       "kpi_name": "Active Product Count",
       "kpi_value": 7229,
+      "executed_at": "2025-11-02T11:30:00.000Z",
+        "frequency": "weekly"
+        
+    },
+    {
+      "kpi_name": "Total Dealer Count",
+      "kpi_value": 15644,
+      "executed_at": "2025-11-02T11:30:00.000Z",
+        "frequency": "weekly"
+        
+    },
+    {
+      "kpi_name": "Active Product Count",
+      "kpi_value": 7229,
       "executed_at": "2025-11-09T11:30:00.000Z",
         "frequency": "weekly"
         
@@ -95,6 +109,34 @@
       "kpi_name": "Total Dealer Count",
       "kpi_value": 15644,
       "executed_at": "2025-12-21T11:30:00.000Z",
+        "frequency": "weekly"
+        
+    },
+    {
+      "kpi_name": "Active Product Count",
+      "kpi_value": 7229,
+      "executed_at": "2025-12-28T11:30:00.000Z",
+        "frequency": "weekly"
+        
+    },
+    {
+      "kpi_name": "Total Dealer Count",
+      "kpi_value": 15644,
+      "executed_at": "2025-12-28T11:30:00.000Z",
+        "frequency": "weekly"
+        
+    },
+    {
+      "kpi_name": "Active Product Count",
+      "kpi_value": 7229,
+      "executed_at": "2026-01-04T11:30:00.000Z",
+        "frequency": "weekly"
+        
+    },
+    {
+      "kpi_name": "Total Dealer Count",
+      "kpi_value": 15644,
+      "executed_at": "2026-01-04T11:30:00.000Z",
         "frequency": "weekly"
         
     }
