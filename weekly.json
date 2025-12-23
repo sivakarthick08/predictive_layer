@@ -2,14 +2,14 @@
   "data": [
     {
       "kpi_name": "Active Product Count",
-      "kpi_value": 7229,
+      "kpi_value": 7227,
       "executed_at": "2025-11-02T11:30:00.000Z",
         "frequency": "weekly"
         
     },
     {
       "kpi_name": "Total Dealer Count",
-      "kpi_value": 15644,
+      "kpi_value": 15642,
       "executed_at": "2025-11-02T11:30:00.000Z",
         "frequency": "weekly"
         
@@ -30,14 +30,14 @@
     },
     {
       "kpi_name": "Active Product Count",
-      "kpi_value": 7229,
+      "kpi_value": 7219,
       "executed_at": "2025-11-16T11:30:00.000Z",
         "frequency": "weekly"
         
     },
     {
       "kpi_name": "Total Dealer Count",
-      "kpi_value": 15644,
+      "kpi_value": 15634,
       "executed_at": "2025-11-16T11:30:00.000Z",
         "frequency": "weekly"
         
