@@ -1,0 +1,15 @@
+{
+  "data": [
+    { "kpi_name": "Annual Revenue", "kpi_value": 4200000, "executed_at": "2015-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 4550000, "executed_at": "2016-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 4920000, "executed_at": "2017-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 5300000, "executed_at": "2018-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 5680000, "executed_at": "2019-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 5900000, "executed_at": "2020-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 6250000, "executed_at": "2021-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 6600000, "executed_at": "2022-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 7000000, "executed_at": "2023-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 7400000, "executed_at": "2024-01-01T00:00:00.000Z", "frequency": "yearly" },
+    { "kpi_name": "Annual Revenue", "kpi_value": 7850000, "executed_at": "2025-01-01T00:00:00.000Z", "frequency": "yearly" }
+  ]
+}

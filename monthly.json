@@ -1,0 +1,15 @@
+{
+  "data": [
+    { "kpi_name": "Monthly Active Users", "kpi_value": 12000, "executed_at": "2025-01-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 12350, "executed_at": "2025-02-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 12580, "executed_at": "2025-03-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 12890, "executed_at": "2025-04-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 13120, "executed_at": "2025-05-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 13400, "executed_at": "2025-06-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 13650, "executed_at": "2025-07-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 13900, "executed_at": "2025-08-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 14220, "executed_at": "2025-09-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 14580, "executed_at": "2025-10-01T00:00:00.000Z", "frequency": "monthly" },
+    { "kpi_name": "Monthly Active Users", "kpi_value": 14800, "executed_at": "2025-11-01T00:00:00.000Z", "frequency": "monthly" }
+  ]
+}
