@@ -24,7 +24,7 @@ export const mastra = new Mastra({
     predictiveAnalysisWorkflow,
   },
   storage: new LibSQLStore({
-    id: 'workflow-snapshots-storage',
+    // id: 'workflow-snapshots-storage',
     url: `file:${path.resolve(process.cwd(), 'workflow-snapshots.db')}`,
   }),
   server: {

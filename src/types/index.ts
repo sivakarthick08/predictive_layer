@@ -6,7 +6,7 @@ export interface KpiDataPoint {
   kpi_name: string;
   kpi_value: number;
   executed_at: string; // ISO 8601 date string
-  frequency: 'daily' | 'weekly' | 'monthly';
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
 }
 
 export interface PredictionResult {
