@@ -11,7 +11,8 @@ if (process.env.OPENAI_API_KEY) process.env.OPENAI_API_KEY = process.env.OPENAI_
 if (process.env.E2B_API_KEY) process.env.E2B_API_KEY = process.env.E2B_API_KEY.replace(/^['"]|['"]$/g, '');
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
-import { dataIngestTool, listKpisTool, predictiveModelTool, prophetModelAutoTool, lstmModelAutoTool, rnnModelAutoTool, intelligentForecastTool, perspectiveTool } from '../tools/index.js';
+import { dataIngestTool, listKpisTool, predictiveModelTool, prophetModelAutoTool, lstmModelAutoTool, intelligentForecastTool, perspectiveTool } from '../tools/index.js';
+// import { dataIngestTool, listKpisTool, predictiveModelTool, prophetModelAutoTool, lstmModelAutoTool, rnnModelAutoTool, intelligentForecastTool, perspectiveTool } from '../tools/index.js';
 import predictiveAnalysisWorkflow from '../workflows/predictive-analysis.js';
 import { readDataFile } from '../config/data-config.js';
 
@@ -110,7 +111,7 @@ Be concise, data-driven, and focused on business value.`,
     predictiveModel: predictiveModelTool,
     prophetModel: prophetModelAutoTool,
     lstmModel: lstmModelAutoTool,
-    rnnModel: rnnModelAutoTool,
+    // rnnModel: rnnModelAutoTool,
     perspective: perspectiveTool,
   },
   workflows: {

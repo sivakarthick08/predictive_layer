@@ -10,10 +10,10 @@ export { listKpisTool } from './list-kpis.js';
 export { 
   prophetModelTool, 
   lstmModelTool, 
-  rnnModelTool,
+  // rnnModelTool,
   prophetModelAutoTool,
   lstmModelAutoTool,
-  rnnModelAutoTool,
+  // rnnModelAutoTool,
   intelligentForecastTool
 } from './advanced-forecasting-models.js';
 export { default as adaptiveMLModelTool } from './adaptive-ml-model.js';
