@@ -115,7 +115,7 @@ export const predictiveModelTool = createTool({
       kpi_name: z.string(),
       kpi_value: z.number(),
       executed_at: z.string(),
-      frequency: z.enum(['daily', 'weekly', 'monthly']).optional(),
+      frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional(),
     })),
     forecast_horizon: z.number().describe('Number of future periods to forecast'),
   }),

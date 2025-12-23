@@ -44,7 +44,7 @@ function generateDatesForFrequency(
     for (let i = 1; i <= count; i++) {
       const d = new Date(baseDate);
       d.setMonth(d.getMonth() + i);
-      d.setDate(0); // Last day of previous month
+      d.setDate(new Date(lastDate).getDate()); // Last day of previous month
       dates.push(d.toISOString());
     }
   } else if (frequency === 'yearly') {
@@ -52,8 +52,8 @@ function generateDatesForFrequency(
     for (let i = 1; i <= count; i++) {
       const d = new Date(baseDate);
       d.setFullYear(d.getFullYear() + i);
-      d.setMonth(11);
-      d.setDate(31);
+      d.setMonth(new Date(lastDate).getMonth());
+      d.setDate(new Date(lastDate).getDate());
       dates.push(d.toISOString());
     }
   }
@@ -120,7 +120,7 @@ export const prophetModelTool = createTool({
       kpi_name: z.string(),
       kpi_value: z.number(),
       executed_at: z.string(),
-      frequency: z.enum(['daily', 'weekly', 'monthly']),
+        frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
     })),
     forecast_horizon: z.number().describe('Number of future periods to forecast'),
     seasonality_mode: z.enum(['additive', 'multiplicative']).optional().describe('Seasonality mode - additive for stable variance, multiplicative for increasing variance'),
@@ -207,7 +207,7 @@ export const lstmModelTool = createTool({
       kpi_name: z.string(),
       kpi_value: z.number(),
       executed_at: z.string(),
-      frequency: z.enum(['daily', 'weekly', 'monthly']),
+      frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
     })),
     forecast_horizon: z.number().describe('Number of future periods to forecast'),
     lookback_window: z.number().optional().describe('Number of previous timesteps to use as input (default: 20)'),
@@ -299,7 +299,7 @@ export const rnnModelTool = createTool({
       kpi_name: z.string(),
       kpi_value: z.number(),
       executed_at: z.string(),
-      frequency: z.enum(['daily', 'weekly', 'monthly']),
+      frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
     })),
     forecast_horizon: z.number().describe('Number of future periods to forecast'),
     sequence_length: z.number().optional().describe('Length of sequences for training (default: 15)'),
@@ -428,9 +428,27 @@ if len(df) > window:
 else:
     detrended = np.zeros_like(y)
 
-# Generate future dates
+# Generate future dates (respect frequency if provided in data)
 last_date = df['ds'].iloc[-1]
-future_dates = [last_date + timedelta(days=i+1) for i in range(${forecastHorizon})]
+freq = data[0].get('frequency', 'daily') if isinstance(data, list) and len(data) > 0 else 'daily'
+future_dates = []
+for i in range(${forecastHorizon}):
+  if freq == 'yearly':
+    try:
+      d = last_date.replace(year=last_date.year + i + 1)
+    except Exception:
+      d = last_date + timedelta(days=365 * (i + 1))
+  elif freq == 'monthly':
+    month = last_date.month - 1 + (i + 1)
+    year = last_date.year + month // 12
+    month = month % 12 + 1
+    day = min(last_date.day, 28)
+    d = datetime(year, month, day)
+  elif freq == 'weekly':
+    d = last_date + timedelta(weeks=i + 1)
+  else:
+    d = last_date + timedelta(days=i + 1)
+  future_dates.append(d)
 
 # Forecast
 future_X = np.arange(len(df), len(df) + ${forecastHorizon}).reshape(-1, 1)
@@ -584,9 +602,27 @@ predictions = scaler.inverse_transform(predictions_scaled).flatten()
 confidence_scores = [90 - (i * 1.5) for i in range(${forecastHorizon})]
 confidence_scores = [max(50, min(95, c)) for c in confidence_scores]
 
-# Generate future dates
+# Generate future dates (respect frequency if provided in data)
 last_date = df['ds'].iloc[-1]
-future_dates = [last_date + timedelta(days=i+1) for i in range(${forecastHorizon})]
+freq = data[0].get('frequency', 'daily') if isinstance(data, list) and len(data) > 0 else 'daily'
+future_dates = []
+for i in range(${forecastHorizon}):
+  if freq == 'yearly':
+    try:
+      d = last_date.replace(year=last_date.year + i + 1)
+    except Exception:
+      d = last_date + timedelta(days=365 * (i + 1))
+  elif freq == 'monthly':
+    month = last_date.month - 1 + (i + 1)
+    year = last_date.year + month // 12
+    month = month % 12 + 1
+    day = min(last_date.day, 28)
+    d = datetime(year, month, day)
+  elif freq == 'weekly':
+    d = last_date + timedelta(weeks=i + 1)
+  else:
+    d = last_date + timedelta(days=i + 1)
+  future_dates.append(d)
 
 # Build predictions - keep all values as-is
 predictions_output = []
@@ -723,9 +759,27 @@ predictions = scaler.inverse_transform(predictions_scaled).flatten()
 confidence_scores = [95 - (i * 1.2) for i in range(${forecastHorizon})]
 confidence_scores = [max(55, min(95, c)) for c in confidence_scores]
 
-# Generate dates
+# Generate dates (respect frequency if provided in data)
 last_date = df['ds'].iloc[-1]
-future_dates = [last_date + timedelta(days=i+1) for i in range(${forecastHorizon})]
+freq = data[0].get('frequency', 'daily') if isinstance(data, list) and len(data) > 0 else 'daily'
+future_dates = []
+for i in range(${forecastHorizon}):
+  if freq == 'yearly':
+    try:
+      d = last_date.replace(year=last_date.year + i + 1)
+    except Exception:
+      d = last_date + timedelta(days=365 * (i + 1))
+  elif freq == 'monthly':
+    month = last_date.month - 1 + (i + 1)
+    year = last_date.year + month // 12
+    month = month % 12 + 1
+    day = min(last_date.day, 28)
+    d = datetime(year, month, day)
+  elif freq == 'weekly':
+    d = last_date + timedelta(weeks=i + 1)
+  else:
+    d = last_date + timedelta(days=i + 1)
+  future_dates.append(d)
 
 # Build output - keep all predicted values as-is
 predictions_output = []
