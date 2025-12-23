@@ -342,100 +342,100 @@ export const lstmModelTool = createTool({
 /**
  * RNN Model - Best for sequential data with temporal dependencies
  */
-export const rnnModelTool = createTool({
-  id: 'rnn-model',
-  description: 'RNN (Recurrent Neural Network) model - ideal for sequential time series data with strong temporal relationships',
-  inputSchema: z.object({
-    historical_data: z.array(z.object({
-      kpi_name: z.string(),
-      kpi_value: z.number(),
-      executed_at: z.string(),
-      frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
-    })),
-    forecast_horizon: z.number().describe('Number of future periods to forecast'),
-    sequence_length: z.number().optional().describe('Length of sequences for training (default: 15)'),
-    hidden_units: z.number().optional().describe('Number of hidden units in RNN (default: 50)'),
-  }),
-  outputSchema: z.object({
-    success: z.boolean(),
-    kpi_name: z.string().optional(),
-    predictions: z.array(z.object({
-      date: z.string(),
-      value: z.number(),
-      confidence: z.number().optional(),
-    })).optional(),
-    model_type: z.string().optional(),
-    error: z.string().optional(),
-  }),
-  execute: async ({ context }) => {
-    try {
-      const { 
-        historical_data, 
-        forecast_horizon, 
-        sequence_length = 15,
-        hidden_units = 50 
-      } = context;
+// export const rnnModelTool = createTool({
+//   id: 'rnn-model',
+//   description: 'RNN (Recurrent Neural Network) model - ideal for sequential time series data with strong temporal relationships',
+//   inputSchema: z.object({
+//     historical_data: z.array(z.object({
+//       kpi_name: z.string(),
+//       kpi_value: z.number(),
+//       executed_at: z.string(),
+//       frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
+//     })),
+//     forecast_horizon: z.number().describe('Number of future periods to forecast'),
+//     sequence_length: z.number().optional().describe('Length of sequences for training (default: 15)'),
+//     hidden_units: z.number().optional().describe('Number of hidden units in RNN (default: 50)'),
+//   }),
+//   outputSchema: z.object({
+//     success: z.boolean(),
+//     kpi_name: z.string().optional(),
+//     predictions: z.array(z.object({
+//       date: z.string(),
+//       value: z.number(),
+//       confidence: z.number().optional(),
+//     })).optional(),
+//     model_type: z.string().optional(),
+//     error: z.string().optional(),
+//   }),
+//   execute: async ({ context }) => {
+//     try {
+//       const { 
+//         historical_data, 
+//         forecast_horizon, 
+//         sequence_length = 15,
+//         hidden_units = 50 
+//       } = context;
 
-      if (!historical_data || historical_data.length < sequence_length + 5) {
-        return {
-          success: false,
-          error: `RNN requires at least ${sequence_length + 5} historical data points`,
-        };
-      }
+//       if (!historical_data || historical_data.length < sequence_length + 5) {
+//         return {
+//           success: false,
+//           error: `RNN requires at least ${sequence_length + 5} historical data points`,
+//         };
+//       }
 
       
 
-      const pythonCode = generateRNNCode(historical_data, forecast_horizon, sequence_length, hidden_units);
+//       const pythonCode = generateRNNCode(historical_data, forecast_horizon, sequence_length, hidden_units);
 
-      const files = {
-        'historical_data.json': JSON.stringify(historical_data),
-      };
+//       const files = {
+//         'historical_data.json': JSON.stringify(historical_data),
+//       };
 
-      const execResult = await executePythonCode(pythonCode, files, 120000);
+//       const execResult = await executePythonCode(pythonCode, files, 120000);
 
-      const hasRealError = execResult.error && 
-        !(execResult.error.name === 'SystemExit' && execResult.error.value === '0');
+//       const hasRealError = execResult.error && 
+//         !(execResult.error.name === 'SystemExit' && execResult.error.value === '0');
 
-      if (hasRealError) {
-        return {
-          success: false,
-          error: `RNN execution error: ${JSON.stringify(execResult.error)}`,
-        };
-      }
+//       if (hasRealError) {
+//         return {
+//           success: false,
+//           error: `RNN execution error: ${JSON.stringify(execResult.error)}`,
+//         };
+//       }
 
-      const output = execResult.stdout.trim();
-      const lastLine = output.split('\n').filter(line => line.trim()).pop() || '{}';
+//       const output = execResult.stdout.trim();
+//       const lastLine = output.split('\n').filter(line => line.trim()).pop() || '{}';
       
-      let result;
-      try {
-        result = JSON.parse(lastLine);
-      } catch (parseError) {
-        return {
-          success: false,
-          error: 'Failed to parse RNN output',
-        };
-      }
+//       let result;
+//       try {
+//         result = JSON.parse(lastLine);
+//       } catch (parseError) {
+//         return {
+//           success: false,
+//           error: 'Failed to parse RNN output',
+//         };
+//       }
 
-      // Get current value (last historical value)
-      const currentValue = historical_data[historical_data.length - 1].kpi_value;
+//       // Get current value (last historical value)
+//       const currentValue = historical_data[historical_data.length - 1].kpi_value;
       
-      // Add day-to-day changes
-      const predictionsWithChanges = addDayToDayChanges(result.predictions || [], currentValue);
+//       // Add day-to-day changes
+//       const predictionsWithChanges = addDayToDayChanges(result.predictions || [], currentValue);
 
-      return {
-        success: true,
-        kpi_name: historical_data[0].kpi_name,
-        predictions: predictionsWithChanges,
-        model_type: 'RNN (Recurrent Neural Network)',
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: `RNN model error: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  },
-});
+//       return {
+//         success: true,
+//         kpi_name: historical_data[0].kpi_name,
+//         predictions: predictionsWithChanges,
+//         model_type: 'RNN (Recurrent Neural Network)',
+//       };
+//     } catch (error) {
+//       return {
+//         success: false,
+//         error: `RNN model error: ${error instanceof Error ? error.message : String(error)}`,
+//       };
+//     }
+//   },
+// });
 
 /**
  * Generate Prophet Python code
@@ -709,159 +709,159 @@ sys.exit(0)
 /**
  * Generate RNN Python code
  */
-function generateRNNCode(
-  historicalData: KpiDataPoint[],
-  forecastHorizon: number,
-  sequenceLength: number,
-  hiddenUnits: number
-): string {
-  return `
-import json
-import sys
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.linear_model import Ridge
-import warnings
-warnings.filterwarnings('ignore')
+// function generateRNNCode(
+//   historicalData: KpiDataPoint[],
+//   forecastHorizon: number,
+//   sequenceLength: number,
+//   hiddenUnits: number
+// ): string {
+//   return `
+// import json
+// import sys
+// import numpy as np
+// import pandas as pd
+// from datetime import datetime, timedelta
+// from sklearn.preprocessing import MinMaxScaler
+// from sklearn.linear_model import Ridge
+// import warnings
+// warnings.filterwarnings('ignore')
 
-# Load data
-with open('historical_data.json', 'r') as f:
-    data = json.load(f)
+// # Load data
+// with open('historical_data.json', 'r') as f:
+//     data = json.load(f)
 
-# Prepare data - keep all points including zeros and duplicates
-df = pd.DataFrame(data)
-df['ds'] = pd.to_datetime(df['executed_at'])
-df = df.sort_values('ds').reset_index(drop=True)
-values = df['kpi_value'].astype(float).values
+// # Prepare data - keep all points including zeros and duplicates
+// df = pd.DataFrame(data)
+// df['ds'] = pd.to_datetime(df['executed_at'])
+// df = df.sort_values('ds').reset_index(drop=True)
+// values = df['kpi_value'].astype(float).values
 
-if len(values) < ${sequenceLength + 5}:
-    print(json.dumps({"error": "Insufficient data"}))
-    sys.exit(0)
+// if len(values) < ${sequenceLength + 5}:
+//     print(json.dumps({"error": "Insufficient data"}))
+//     sys.exit(0)
 
-# Normalize
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaled_values = scaler.fit_transform(values.reshape(-1, 1)).flatten()
+// # Normalize
+// scaler = MinMaxScaler(feature_range=(0, 1))
+// scaled_values = scaler.fit_transform(values.reshape(-1, 1)).flatten()
 
-# Create RNN sequences
-def create_rnn_sequences(data, seq_length):
-    X, y = [], []
-    for i in range(len(data) - seq_length):
-        X.append(data[i:i+seq_length])
-        y.append(data[i+seq_length])
-    return np.array(X), np.array(y)
+// # Create RNN sequences
+// def create_rnn_sequences(data, seq_length):
+//     X, y = [], []
+//     for i in range(len(data) - seq_length):
+//         X.append(data[i:i+seq_length])
+//         y.append(data[i+seq_length])
+//     return np.array(X), np.array(y)
 
-X, y = create_rnn_sequences(scaled_values, ${sequenceLength})
+// X, y = create_rnn_sequences(scaled_values, ${sequenceLength})
 
-if len(X) < 2:
-    print(json.dumps({"error": "Cannot create RNN sequences"}))
-    sys.exit(0)
+// if len(X) < 2:
+//     print(json.dumps({"error": "Cannot create RNN sequences"}))
+//     sys.exit(0)
 
-# Simulate RNN with engineered features
-def rnn_features(sequence, hidden_units=${hiddenUnits}):
-    """Extract features that simulate RNN hidden state processing"""
-    features = []
+// # Simulate RNN with engineered features
+// def rnn_features(sequence, hidden_units=${hiddenUnits}):
+//     """Extract features that simulate RNN hidden state processing"""
+//     features = []
     
-    # Temporal features
-    features.append(np.mean(sequence))
-    features.append(np.std(sequence) if np.std(sequence) > 0 else 0.001)
-    features.append(sequence[-1])
+//     # Temporal features
+//     features.append(np.mean(sequence))
+//     features.append(np.std(sequence) if np.std(sequence) > 0 else 0.001)
+//     features.append(sequence[-1])
     
-    # Momentum features
-    if len(sequence) > 1:
-        momentum = sequence[-1] - sequence[-2]
-        features.append(momentum)
+//     # Momentum features
+//     if len(sequence) > 1:
+//         momentum = sequence[-1] - sequence[-2]
+//         features.append(momentum)
     
-    # Trend features
-    x = np.arange(len(sequence))
-    y_seq = sequence
-    if np.std(x) > 0:
-        trend = np.polyfit(x, y_seq, 1)[0]
-        features.append(trend)
+//     # Trend features
+//     x = np.arange(len(sequence))
+//     y_seq = sequence
+//     if np.std(x) > 0:
+//         trend = np.polyfit(x, y_seq, 1)[0]
+//         features.append(trend)
     
-    # Volatility
-    features.append(np.max(sequence) - np.min(sequence))
+//     # Volatility
+//     features.append(np.max(sequence) - np.min(sequence))
     
-    # Multi-scale patterns
-    for window in [2, 3, 4]:
-        if len(sequence) >= window:
-            features.append(np.mean(sequence[-window:]))
+//     # Multi-scale patterns
+//     for window in [2, 3, 4]:
+//         if len(sequence) >= window:
+//             features.append(np.mean(sequence[-window:]))
     
-    return np.array(features[:${hiddenUnits}])
+//     return np.array(features[:${hiddenUnits}])
 
-X_features = np.array([rnn_features(seq) for seq in X])
+// X_features = np.array([rnn_features(seq) for seq in X])
 
-# Train RNN-like model
-model = Ridge(alpha=0.1)
-model.fit(X_features, y)
+// # Train RNN-like model
+// model = Ridge(alpha=0.1)
+// model.fit(X_features, y)
 
-# Generate predictions
-last_sequence = scaled_values[-${sequenceLength}:]
-predictions_scaled = []
-current_seq = last_sequence.copy()
+// # Generate predictions
+// last_sequence = scaled_values[-${sequenceLength}:]
+// predictions_scaled = []
+// current_seq = last_sequence.copy()
 
-for i in range(${forecastHorizon}):
-    features = rnn_features(current_seq)
-    next_pred = model.predict(features.reshape(1, -1))[0]
-    next_pred = np.clip(next_pred, scaler.data_min_[0], scaler.data_max_[0])
-    predictions_scaled.append(next_pred)
-    current_seq = np.append(current_seq[1:], next_pred)
+// for i in range(${forecastHorizon}):
+//     features = rnn_features(current_seq)
+//     next_pred = model.predict(features.reshape(1, -1))[0]
+//     next_pred = np.clip(next_pred, scaler.data_min_[0], scaler.data_max_[0])
+//     predictions_scaled.append(next_pred)
+//     current_seq = np.append(current_seq[1:], next_pred)
 
-# Inverse transform - keep all predicted values as-is
-predictions_scaled = np.array(predictions_scaled).reshape(-1, 1)
-predictions = scaler.inverse_transform(predictions_scaled).flatten()
+// # Inverse transform - keep all predicted values as-is
+// predictions_scaled = np.array(predictions_scaled).reshape(-1, 1)
+// predictions = scaler.inverse_transform(predictions_scaled).flatten()
 
-# Confidence decay
-confidence_scores = [95 - (i * 1.2) for i in range(${forecastHorizon})]
-confidence_scores = [max(55, min(95, c)) for c in confidence_scores]
+// # Confidence decay
+// confidence_scores = [95 - (i * 1.2) for i in range(${forecastHorizon})]
+// confidence_scores = [max(55, min(95, c)) for c in confidence_scores]
 
-# Generate dates (respect frequency if provided in data)
-last_date = df['ds'].iloc[-1]
-freq = data[0].get('frequency', 'daily') if isinstance(data, list) and len(data) > 0 else 'daily'
-future_dates = []
-for i in range(${forecastHorizon}):
-  if freq == 'yearly':
-    try:
-      d = last_date.replace(year=last_date.year + i + 1)
-    except Exception:
-      d = last_date + timedelta(days=365 * (i + 1))
-  elif freq == 'monthly':
-    month = last_date.month - 1 + (i + 1)
-    year = last_date.year + month // 12
-    month = month % 12 + 1
-    day = min(last_date.day, 28)
-    d = datetime(year, month, day)
-  elif freq == 'weekly':
-    d = last_date + timedelta(weeks=i + 1)
-  else:
-    d = last_date + timedelta(days=i + 1)
-  future_dates.append(d)
+// # Generate dates (respect frequency if provided in data)
+// last_date = df['ds'].iloc[-1]
+// freq = data[0].get('frequency', 'daily') if isinstance(data, list) and len(data) > 0 else 'daily'
+// future_dates = []
+// for i in range(${forecastHorizon}):
+//   if freq == 'yearly':
+//     try:
+//       d = last_date.replace(year=last_date.year + i + 1)
+//     except Exception:
+//       d = last_date + timedelta(days=365 * (i + 1))
+//   elif freq == 'monthly':
+//     month = last_date.month - 1 + (i + 1)
+//     year = last_date.year + month // 12
+//     month = month % 12 + 1
+//     day = min(last_date.day, 28)
+//     d = datetime(year, month, day)
+//   elif freq == 'weekly':
+//     d = last_date + timedelta(weeks=i + 1)
+//   else:
+//     d = last_date + timedelta(days=i + 1)
+//   future_dates.append(d)
 
-# Build output - keep all predicted values as-is
-predictions_output = []
-for i, date in enumerate(future_dates):
-    predictions_output.append({
-        "date": date.isoformat() + "Z",
-        "value": float(np.round(predictions[i], 2)),
-        "confidence": float(confidence_scores[i])
-    })
+// # Build output - keep all predicted values as-is
+// predictions_output = []
+// for i, date in enumerate(future_dates):
+//     predictions_output.append({
+//         "date": date.isoformat() + "Z",
+//         "value": float(np.round(predictions[i], 2)),
+//         "confidence": float(confidence_scores[i])
+//     })
 
-result = {
-    "kpi_name": data[0]['kpi_name'],
-    "predictions": predictions_output,
-    "model_info": {
-        "algorithm": "RNN-inspired (Ridge Regression with temporal features)",
-        "training_samples": len(X),
-        "sequence_length": ${sequenceLength},
-        "hidden_units": ${hiddenUnits}
-    }
-}
+// result = {
+//     "kpi_name": data[0]['kpi_name'],
+//     "predictions": predictions_output,
+//     "model_info": {
+//         "algorithm": "RNN-inspired (Ridge Regression with temporal features)",
+//         "training_samples": len(X),
+//         "sequence_length": ${sequenceLength},
+//         "hidden_units": ${hiddenUnits}
+//     }
+// }
 
-print(json.dumps(result))
-sys.exit(0)
-`;
-}
+// print(json.dumps(result))
+// sys.exit(0)
+// `;
+// }
 
 /**
  * Helper: Load all historical data for a specific KPI from data.json
@@ -1032,67 +1032,67 @@ export const lstmModelAutoTool = createTool({
  * RNN Model with Auto Data Loading
  * Automatically fetches all historical records for the specified KPI
  */
-export const rnnModelAutoTool = createTool({
-  id: 'rnn-model-auto',
-  description: 'RNN model with automatic historical data loading - specify KPI name and get 7-day forecast',
-  inputSchema: z.object({
-    kpi_name: z.string().describe('Name of the KPI to forecast (e.g., "Active Product Count")'),
-    forecast_horizon: z.number().optional().default(7).describe('Number of days to forecast'),
-    sequence_length: z.number().optional().default(10).describe('Length of sequences for RNN'),
-    hidden_units: z.number().optional().default(32).describe('Number of hidden units'),
-  }),
-  outputSchema: z.object({
-    success: z.boolean(),
-    kpi_name: z.string().optional(),
-    data_points_used: z.number().optional(),
-    predictions: z.array(z.object({
-      date: z.string(),
-      value: z.number(),
-      confidence: z.number().optional(),
-    })).optional(),
-    model_type: z.string().optional(),
-    error: z.string().optional(),
-  }),
-  execute: async ({ context }) => {
-    try {
-      const { kpi_name, forecast_horizon = 7, sequence_length = 10, hidden_units = 32 } = context;
+// export const rnnModelAutoTool = createTool({
+//   id: 'rnn-model-auto',
+//   description: 'RNN model with automatic historical data loading - specify KPI name and get 7-day forecast',
+//   inputSchema: z.object({
+//     kpi_name: z.string().describe('Name of the KPI to forecast (e.g., "Active Product Count")'),
+//     forecast_horizon: z.number().optional().default(7).describe('Number of days to forecast'),
+//     sequence_length: z.number().optional().default(10).describe('Length of sequences for RNN'),
+//     hidden_units: z.number().optional().default(32).describe('Number of hidden units'),
+//   }),
+//   outputSchema: z.object({
+//     success: z.boolean(),
+//     kpi_name: z.string().optional(),
+//     data_points_used: z.number().optional(),
+//     predictions: z.array(z.object({
+//       date: z.string(),
+//       value: z.number(),
+//       confidence: z.number().optional(),
+//     })).optional(),
+//     model_type: z.string().optional(),
+//     error: z.string().optional(),
+//   }),
+//   execute: async ({ context }) => {
+//     try {
+//       const { kpi_name, forecast_horizon = 7, sequence_length = 10, hidden_units = 32 } = context;
 
-      // Load all historical data for this KPI
-      const historical_data = loadKpiHistory(kpi_name);
+//       // Load all historical data for this KPI
+//       const historical_data = loadKpiHistory(kpi_name);
 
-      if (!historical_data || historical_data.length < 15) {
-        return {
-          success: false,
-          kpi_name,
-          data_points_used: historical_data.length,
-          error: `RNN requires at least 15 historical data points. Found ${historical_data.length} for "${kpi_name}"`,
-        };
-      }
+//       if (!historical_data || historical_data.length < 15) {
+//         return {
+//           success: false,
+//           kpi_name,
+//           data_points_used: historical_data.length,
+//           error: `RNN requires at least 15 historical data points. Found ${historical_data.length} for "${kpi_name}"`,
+//         };
+//       }
 
       
 
-      // Call the standard RNN tool with loaded data
-      const result = await rnnModelTool.execute({
-        context: {
-          historical_data,
-          forecast_horizon,
-          sequence_length,
-          hidden_units,
-        },
-      } as any);
+//       // Call the standard RNN tool with loaded data
+//       const result = await rnnModelTool.execute({
+//         context: {
+//           historical_data,
+//           forecast_horizon,
+//           sequence_length,
+//           hidden_units,
+//         },
+//       } as any);
 
-      return {
-        ...result,
-        data_points_used: historical_data.length,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: `RNN auto-load error: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  },
-});
+//       return {
+//         ...result,
+//         data_points_used: historical_data.length,
+//       };
+//     } catch (error) {
+//       return {
+//         success: false,
+//         error: `RNN auto-load error: ${error instanceof Error ? error.message : String(error)}`,
+//       };
+//     }
+//   },
+// });
 
 /**
  * Intelligent Fallback Forecasting Tool
