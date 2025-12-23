@@ -62,6 +62,41 @@ function generateDatesForFrequency(
 }
 
 /**
+ * Add day-to-day change calculations to predictions
+ */
+function addDayToDayChanges(
+  predictions: Array<{ date: string; value: number; [key: string]: any }>,
+  currentValue: number
+): Array<{ date: string; value: number; day_to_day_change?: { value: number; percentage: number | null }; [key: string]: any }> {
+  return predictions.map((pred, idx) => {
+    if (idx === 0) {
+      // First prediction: compare to current value
+      const changeValue = pred.value - currentValue;
+      const changePercentage = currentValue !== 0 ? (changeValue / currentValue) * 100 : null;
+      return {
+        ...pred,
+        day_to_day_change: {
+          value: Math.round(changeValue * 100) / 100,
+          percentage: changePercentage !== null ? Math.round(changePercentage * 100) / 100 : null,
+        },
+      };
+    } else {
+      // Subsequent predictions: compare to previous prediction
+      const prevValue = predictions[idx - 1].value;
+      const changeValue = pred.value - prevValue;
+      const changePercentage = prevValue !== 0 ? (changeValue / prevValue) * 100 : null;
+      return {
+        ...pred,
+        day_to_day_change: {
+          value: Math.round(changeValue * 100) / 100,
+          percentage: changePercentage !== null ? Math.round(changePercentage * 100) / 100 : null,
+        },
+      };
+    }
+  });
+}
+
+/**
  * Helper function to generate perspective from forecast results
  */
 async function generatePerspective(
@@ -133,6 +168,10 @@ export const prophetModelTool = createTool({
       value: z.number(),
       lower_bound: z.number().optional(),
       upper_bound: z.number().optional(),
+      day_to_day_change: z.object({
+        value: z.number(),
+        percentage: z.number().nullable(),
+      }).optional(),
     })).optional(),
     model_type: z.string().optional(),
     error: z.string().optional(),
@@ -181,10 +220,16 @@ export const prophetModelTool = createTool({
         };
       }
 
+      // Get current value (last historical value)
+      const currentValue = historical_data[historical_data.length - 1].kpi_value;
+      
+      // Add day-to-day changes
+      const predictionsWithChanges = addDayToDayChanges(result.predictions || [], currentValue);
+
       return {
         success: true,
         kpi_name: historical_data[0].kpi_name,
-        predictions: result.predictions || [],
+        predictions: predictionsWithChanges,
         model_type: 'Prophet (Facebook)',
       };
     } catch (error) {
@@ -273,10 +318,16 @@ export const lstmModelTool = createTool({
         };
       }
 
+      // Get current value (last historical value)
+      const currentValue = historical_data[historical_data.length - 1].kpi_value;
+      
+      // Add day-to-day changes
+      const predictionsWithChanges = addDayToDayChanges(result.predictions || [], currentValue);
+
       return {
         success: true,
         kpi_name: historical_data[0].kpi_name,
-        predictions: result.predictions || [],
+        predictions: predictionsWithChanges,
         model_type: 'LSTM (Deep Learning)',
       };
     } catch (error) {
@@ -365,10 +416,16 @@ export const rnnModelTool = createTool({
         };
       }
 
+      // Get current value (last historical value)
+      const currentValue = historical_data[historical_data.length - 1].kpi_value;
+      
+      // Add day-to-day changes
+      const predictionsWithChanges = addDayToDayChanges(result.predictions || [], currentValue);
+
       return {
         success: true,
         kpi_name: historical_data[0].kpi_name,
-        predictions: result.predictions || [],
+        predictions: predictionsWithChanges,
         model_type: 'RNN (Recurrent Neural Network)',
       };
     } catch (error) {
