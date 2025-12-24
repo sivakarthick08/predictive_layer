@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { executePythonCode } from './e2b-client.js';
 import type { KpiDataPoint } from '../types/index.js';
 import { perspectiveTool } from './perspective-tool.js';
+import { loadData } from '../config/data-config.js';
 
 /**
  * Generate forecast dates based on frequency
@@ -195,7 +196,17 @@ export const prophetModelTool = createTool({
         'historical_data.json': JSON.stringify(historical_data),
       };
 
-      const execResult = await executePythonCode(pythonCode, files, 60000);
+      let execResult;
+      try {
+        execResult = await executePythonCode(pythonCode, files, 60000);
+      } catch (e2bError) {
+        const errorMsg = e2bError instanceof Error ? e2bError.message : String(e2bError);
+        console.error('[Prophet] E2B execution failed:', errorMsg);
+        return {
+          success: false,
+          error: `E2B execution failed - Prophet model unavailable: ${errorMsg}`,
+        };
+      }
 
       const hasRealError = execResult.error && 
         !(execResult.error.name === 'SystemExit' && execResult.error.value === '0');
@@ -1144,23 +1155,17 @@ export const intelligentForecastTool = createTool({
     try {
     
 
-      // Load historical data from data.json
-      const fs = await import('fs');
-      const path = await import('path');
-      
-      const dataFile = process.env.DATA_FILE || 'data.json';
-      const filePath = path.default.isAbsolute(dataFile) ? dataFile : path.default.resolve(process.cwd(), dataFile);
-      
-      if (!fs.default.existsSync(filePath)) {
+      // Load historical data using centralized config
+      let allData: any[];
+      try {
+        allData = await loadData();
+      } catch (err) {
         return {
           success: false,
           kpi_name,
-          error: `Data file not found: ${filePath}`,
+          error: `Failed to load data: ${err instanceof Error ? err.message : String(err)}`,
         };
       }
-
-      const raw = JSON.parse(fs.default.readFileSync(filePath, 'utf8'));
-      const allData = Array.isArray(raw) ? raw : (raw.data || []);
       
       const historicalData = allData
         .filter((d: any) => d.kpi_name && d.kpi_name.toLowerCase() === kpi_name.toLowerCase())
@@ -1401,6 +1406,152 @@ export const intelligentForecastTool = createTool({
         success: false,
         error: `Intelligent Forecast error: ${error instanceof Error ? error.message : String(error)}`,
         attempted_models: attemptedModels,
+      };
+    }
+  },
+});
+
+/**
+ * Batch Intelligent Forecasting Tool
+ * 
+ * Forecasts multiple KPIs at once with automatic fallback
+ * Returns results for all KPIs in a single call
+ */
+export const batchIntelligentForecastTool = createTool({
+  id: 'batch-intelligent-forecast',
+  description: 'Forecast multiple KPIs at once with automatic fallback: tries Prophet → LSTM → Adaptive ML for each KPI',
+  inputSchema: z.object({
+    kpi_names: z.array(z.string()).describe('List of KPI names to forecast (e.g., ["Active Product Count", "Total Dealer Count"])'),
+    forecast_horizon: z.number().optional().default(7).describe('Number of periods to forecast for all KPIs'),
+    parallel: z.boolean().optional().default(true).describe('Run forecasts in parallel (true) or sequentially (false)'),
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    total_kpis: z.number().optional(),
+    successful_forecasts: z.number().optional(),
+    failed_forecasts: z.number().optional(),
+    forecasts: z.array(z.object({
+      kpi_name: z.string(),
+      success: z.boolean(),
+      current_value: z.number().optional(),
+      frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']).optional(),
+      data_points_used: z.number().optional(),
+      predictions: z.array(z.object({
+        date: z.string(),
+        value: z.number(),
+        confidence: z.number().optional(),
+        lower_bound: z.number().optional(),
+        upper_bound: z.number().optional(),
+      })).optional(),
+      model_used: z.string().optional(),
+      model_tier: z.enum(['primary', 'secondary', 'tertiary']).optional(),
+      error: z.string().optional(),
+      summary: z.string().optional(),
+      highlights: z.array(z.string()).optional(),
+      recommended_actions: z.array(z.object({
+        action: z.string(),
+        horizon: z.string(),
+      })).optional(),
+    })).optional(),
+    total_time_ms: z.number().optional(),
+    error: z.string().optional(),
+  }),
+  execute: async ({ context }) => {
+    const { kpi_names, forecast_horizon = 7, parallel = true } = context;
+    const startTime = Date.now();
+
+    try {
+      if (!Array.isArray(kpi_names) || kpi_names.length === 0) {
+        return {
+          success: false,
+          error: 'kpi_names must be a non-empty array of KPI names',
+        };
+      }
+
+      // Load all data once using centralized config
+      let allData: any[];
+      try {
+        allData = await loadData();
+      } catch (err) {
+        return {
+          success: false,
+          error: `Failed to load data: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+
+      // Create forecast promises
+      const forecastPromises = kpi_names.map(async (kpiName) => {
+        try {
+          // Filter and sort data for this KPI
+          const historicalData = allData
+            .filter((d: any) => d.kpi_name && d.kpi_name.toLowerCase() === kpiName.toLowerCase())
+            .sort((a: any, b: any) => {
+              const dateA = new Date(a.executed_at).getTime();
+              const dateB = new Date(b.executed_at).getTime();
+              return dateA - dateB;
+            })
+            .map((d: any) => ({
+              ...d,
+              frequency: d.frequency || 'daily' as const,
+            }));
+
+          if (!historicalData || historicalData.length === 0) {
+            return {
+              kpi_name: kpiName,
+              success: false,
+              error: `No data found for KPI: "${kpiName}"`,
+            };
+          }
+
+          // Execute single forecast using intelligentForecastTool logic
+          const result = await intelligentForecastTool.execute({
+            context: {
+              kpi_name: kpiName,
+              forecast_horizon,
+            },
+          } as any);
+
+          return {
+            kpi_name: kpiName,
+            ...result,
+          };
+        } catch (error) {
+          return {
+            kpi_name: kpiName,
+            success: false,
+            error: `Forecast failed for ${kpiName}: ${error instanceof Error ? error.message : String(error)}`,
+          };
+        }
+      });
+
+      // Execute forecasts (parallel or sequential)
+      const forecasts = parallel 
+        ? await Promise.all(forecastPromises)
+        : await forecastPromises.reduce(
+            async (acc, promise) => {
+              const results = await acc;
+              const result = await promise;
+              return [...results, result];
+            },
+            Promise.resolve<any[]>([])
+          );
+
+      const successCount = forecasts.filter(f => f.success).length;
+      const failureCount = forecasts.filter(f => !f.success).length;
+      const totalTime = Date.now() - startTime;
+
+      return {
+        success: successCount > 0,
+        total_kpis: kpi_names.length,
+        successful_forecasts: successCount,
+        failed_forecasts: failureCount,
+        forecasts,
+        total_time_ms: totalTime,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Batch Intelligent Forecast error: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   },

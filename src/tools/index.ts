@@ -14,7 +14,8 @@ export {
   prophetModelAutoTool,
   lstmModelAutoTool,
   // rnnModelAutoTool,
-  intelligentForecastTool
+  intelligentForecastTool,
+  batchIntelligentForecastTool
 } from './advanced-forecasting-models.js';
 export { default as adaptiveMLModelTool } from './adaptive-ml-model.js';
 export { perspectiveTool } from './perspective-tool.js';

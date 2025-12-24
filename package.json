@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "cross-env OTEL_TRACES_EXPORTER=none NODE_OPTIONS=--max-old-space-size=2048 mastra dev",
     "dev:node": "tsx index.ts",
+    "verify": "tsx src/verify-datasource.ts",
+    "batch-forecast": "tsx src/batch-forecast-demo.ts",
     "ingest": "tsx src/test-ingest.ts",
     "forecast": "tsx src/forecast.ts",
     "interactive-forecast": "tsx src/interactive-forecast.ts",

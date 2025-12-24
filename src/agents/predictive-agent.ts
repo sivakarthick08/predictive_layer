@@ -11,7 +11,7 @@ if (process.env.OPENAI_API_KEY) process.env.OPENAI_API_KEY = process.env.OPENAI_
 if (process.env.E2B_API_KEY) process.env.E2B_API_KEY = process.env.E2B_API_KEY.replace(/^['"]|['"]$/g, '');
 import { openai } from '@ai-sdk/openai';
 import { Agent } from '@mastra/core/agent';
-import { dataIngestTool, listKpisTool, predictiveModelTool, prophetModelAutoTool, lstmModelAutoTool, intelligentForecastTool, perspectiveTool } from '../tools/index.js';
+import { dataIngestTool, listKpisTool, predictiveModelTool, prophetModelAutoTool, lstmModelAutoTool, intelligentForecastTool, batchIntelligentForecastTool, perspectiveTool } from '../tools/index.js';
 // import { dataIngestTool, listKpisTool, predictiveModelTool, prophetModelAutoTool, lstmModelAutoTool, rnnModelAutoTool, intelligentForecastTool, perspectiveTool } from '../tools/index.js';
 import predictiveAnalysisWorkflow from '../workflows/predictive-analysis.js';
 import { readDataFile } from '../config/data-config.js';
@@ -90,7 +90,9 @@ Optional: Request specific models if needed:
 When the user asks to:
 - "list KPIs" or "show available KPIs": Use list-kpis tool
 - "forecast [KPI]" or "[KPI] prediction": Use intelligent-forecast (primary choice)
-- "forecast [KPI] using Prophet/LSTM/RNN": Use specific model tool
+- "forecast [KPI1], [KPI2], ..." (multiple KPIs): Use batch-intelligent-forecast
+- "forecast all KPIs": Use batch-intelligent-forecast with all available KPIs
+- "forecast [KPI] using Prophet/LSTM": Use specific model tool
 - "compare [KPI]": Call multiple models and compare
 - Ingest data: Use data-ingest tool
 
@@ -108,6 +110,7 @@ Be concise, data-driven, and focused on business value.`,
     listKpis: listKpisTool,
     dataIngest: dataIngestTool,
     intelligentForecast: intelligentForecastTool,
+    batchIntelligentForecast: batchIntelligentForecastTool,
     predictiveModel: predictiveModelTool,
     prophetModel: prophetModelAutoTool,
     lstmModel: lstmModelAutoTool,
