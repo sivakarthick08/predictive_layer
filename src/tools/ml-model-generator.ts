@@ -35,6 +35,9 @@ interface GeneratedMLCode {
 export async function analyzeDataCharacteristics(
   data: KpiDataPoint[]
 ): Promise<DataAnalysis> {
+  // Prepare compact TOON-format (delta-encoded) to include in the prompt
+  const toon = convertToToon(data);
+
   const prompt = `You are a data scientist analyzing time series KPI data. 
 
 Data summary:
@@ -42,6 +45,9 @@ Data summary:
 - KPI name: ${data[0]?.kpi_name || 'Unknown'}
 - Date range: ${data[0]?.executed_at} to ${data[data.length - 1]?.executed_at}
 - Values: ${data.map(d => d.kpi_value).join(', ')}
+
+Additionally, the data is provided in a compact TOON format (delta-encoded) below. Use it if you prefer compact parsing:
+TOON_DATA: ${toon}
 
 Analyze this data and provide:
 1. Trend direction (increasing/decreasing/stable/volatile)
@@ -88,6 +94,11 @@ export async function generateMLModelCode(
   analysis: DataAnalysis,
   forecastHorizon: number
 ): Promise<GeneratedMLCode> {
+  // Attach TOON-format (delta-encoded) as a compact data representation for the LLM
+  // Note: `generateMLModelCode` receives `analysis` not the raw data; include an optional
+  // TOON hint when available in analysis.dataToon (set by caller) to minimize payload changes.
+  const toonHint = (analysis as any)?.dataToon ? `\nTOON_DATA: ${(analysis as any).dataToon}` : '';
+
   const prompt = `You are an expert ML engineer. Generate Python code for time series forecasting based on this data analysis:
 
 Data Characteristics:
@@ -98,6 +109,7 @@ Data Characteristics:
 - Outliers: ${analysis.outliers}
 - Recommended Model: ${analysis.recommendedModel}
 - Data Quality: ${analysis.dataQuality.completeness}% complete, ${analysis.dataQuality.zeroHeavy ? 'zero-heavy' : 'normal distribution'}
+${toonHint}
 
 Task: Generate complete, runnable Python code that:
 1. Reads historical_data.json (contains array of {kpi_name, kpi_value, executed_at, frequency})
@@ -160,5 +172,48 @@ Respond with:
     modelType: modelTypeMatch?.[1]?.trim() || analysis.recommendedModel,
     reasoning: reasoningMatch?.[1]?.trim() || 'Model selected based on data characteristics',
   };
+}
+
+/**
+ * Convert an array of KpiDataPoint into a compact TOON-format JSON string.
+ * TOON format (delta-encoded) example:
+ * { schema: {n,v,t,f}, name: "revenue", f: "d", start: "2025-01-01T00:00:00Z",
+ *   values: [100,20,10,-5], date_deltas: [0,86400,86400,86400] }
+ */
+export function convertToToon(data: KpiDataPoint[]): string {
+  if (!data || data.length === 0) return '{}';
+
+  // short keys: n=name, v=value, t=time, f=frequency
+  const name = data[0].kpi_name;
+  const freq = (data[0].frequency || 'daily').slice(0,1); // d/w/m/y
+
+  // values: first absolute then subsequent deltas
+  const values: number[] = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i === 0) values.push(Math.round(data[i].kpi_value * 100) / 100);
+    else values.push(Math.round((data[i].kpi_value - data[i-1].kpi_value) * 100) / 100);
+  }
+
+  // date deltas in seconds (first is 0)
+  const dateDeltas: number[] = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i === 0) dateDeltas.push(0);
+    else {
+      const prev = new Date(data[i-1].executed_at).getTime();
+      const cur = new Date(data[i].executed_at).getTime();
+      dateDeltas.push(Math.round((cur - prev) / 1000));
+    }
+  }
+
+  const toonObj = {
+    schema: { n: 'kpi_name', v: 'kpi_value', t: 'executed_at', f: 'frequency' },
+    name,
+    f: freq,
+    start: data[0].executed_at,
+    values,
+    date_deltas: dateDeltas,
+  };
+
+  return JSON.stringify(toonObj);
 }
 

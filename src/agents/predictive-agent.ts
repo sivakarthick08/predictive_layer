@@ -105,7 +105,7 @@ When presenting forecast results:
 - ALWAYS present the perspection, highlights, and recommended actions (automatically included in forecast results)
 
 Be concise, data-driven, and focused on business value.`,
-  model: openai('gpt-4o'),
+  model: openai('gpt-4o-mini'),
   tools: {
     listKpis: listKpisTool,
     dataIngest: dataIngestTool,

@@ -14,6 +14,7 @@ import { executePythonCode } from './e2b-client.js';
 import { 
   analyzeDataCharacteristics, 
   generateMLModelCode,  
+  convertToToon,
 } from './ml-model-generator.js';
 
 export const predictiveModelTool = createTool({
@@ -56,6 +57,8 @@ export const predictiveModelTool = createTool({
       
       // Step 1: Use LLM to analyze data characteristics
       const dataAnalysis = await analyzeDataCharacteristics(historical_data);
+      // attach compact TOON hint for downstream code-generation prompt
+      (dataAnalysis as any).dataToon = convertToToon(historical_data);
       
       console.log('Trend:', dataAnalysis.trend, '| Model:', dataAnalysis.recommendedModel);
 
