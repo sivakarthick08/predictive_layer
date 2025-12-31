@@ -181,10 +181,10 @@ export const prophetModelTool = createTool({
     try {
       const { historical_data, forecast_horizon, seasonality_mode = 'additive' } = context;
 
-      if (!historical_data || historical_data.length < 10) {
+      if (!historical_data || historical_data.length < 5) {
         return {
           success: false,
-          error: 'Prophet requires at least 10 historical data points',
+          error: 'Prophet requires at least 5 historical data points',
         };
       }
 
@@ -285,7 +285,7 @@ export const lstmModelTool = createTool({
       const { 
         historical_data, 
         forecast_horizon, 
-        lookback_window = 20,
+        lookback_window = 5,
         epochs = 100 
       } = context;
 
@@ -940,12 +940,12 @@ export const prophetModelAutoTool = createTool({
       // Load all historical data for this KPI
       const historical_data = loadKpiHistory(kpi_name);
 
-      if (!historical_data || historical_data.length < 10) {
+      if (!historical_data || historical_data.length < 5) {
         return {
           success: false,
           kpi_name,
           data_points_used: historical_data.length,
-          error: `Prophet requires at least 10 historical data points. Found ${historical_data.length} for "${kpi_name}"`,
+          error: `Prophet requires at least 5 historical data points. Found ${historical_data.length} for "${kpi_name}"`,
         };
       }
 
@@ -1000,7 +1000,7 @@ export const lstmModelAutoTool = createTool({
   }),
   execute: async ({ context }) => {
     try {
-      const { kpi_name, forecast_horizon = 7, lookback_window = 20, epochs = 100 } = context;
+      const { kpi_name, forecast_horizon = 7, lookback_window = 5, epochs = 100 } = context;
 
       // Load all historical data for this KPI
       const historical_data = loadKpiHistory(kpi_name);
@@ -1192,7 +1192,7 @@ export const intelligentForecastTool = createTool({
       const lastDate = historicalData[historicalData.length - 1].executed_at;
 
       // ========== TIER 1: Try Prophet ==========
-      if (historicalData.length >= 10) {
+      if (historicalData.length >= 5) {
         try {
           const prophetResult = await prophetModelAutoTool.execute({
             context: {
@@ -1252,13 +1252,13 @@ export const intelligentForecastTool = createTool({
         attemptedModels.push({ 
           model: 'Prophet', 
           status: 'failed', 
-          reason: `Insufficient data (${historicalData.length}/10)` 
+          reason: `Insufficient data (${historicalData.length}/5)` 
         });
         
       }
 
       // ========== TIER 2: Try LSTM ==========
-      if (historicalData.length >= 25) {
+      if (historicalData.length >= 10) {
         try {
           const lstmResult = await lstmModelAutoTool.execute({
             context: {
@@ -1318,7 +1318,7 @@ export const intelligentForecastTool = createTool({
         attemptedModels.push({ 
           model: 'LSTM', 
           status: 'failed', 
-          reason: `Insufficient data (${historicalData.length}/25)` 
+          reason: `Insufficient data (${historicalData.length}/10)` 
         });
         
       }

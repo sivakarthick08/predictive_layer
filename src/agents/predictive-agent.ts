@@ -59,7 +59,7 @@ The intelligent-forecast tool automatically tries models in priority order:
 
  TIER 1 - PROPHET (Primary Model)
    - Best for: Business metrics with seasonality and trends
-   - Requires: ≥10 historical data points
+   - Requires: ≥5 historical data points
    - If sufficient data and succeeds → Returns Prophet forecast
    - If fails or insufficient data → Automatically tries TIER 2
 
@@ -98,7 +98,7 @@ When the user asks to:
 
 When presenting forecast results:
 - Show KPI name, current value, and model used
-- Display predicted dates, values, and confidence intervals  
+- Display predicted dates, values, and confidence intervals in table format only for each forecasted point
 - Highlight key trends (increasing/decreasing/stable)
 - Note the number of historical data points used for training
 - If fallback occurred, explain why primary model wasn't used
